@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { requireAuthenticatedUser } from "@/lib/server/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const reportSchema = z.object({
@@ -43,6 +44,7 @@ export async function createReportAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   const { error } = await supabase.from("reports").insert({
     client_id: parsed.data.clientId || null,
@@ -75,6 +77,7 @@ export async function updateReportAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   const { error } = await supabase
     .from("reports")
@@ -108,6 +111,7 @@ export async function addReportItemAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   let existing: { id: string } | null = null;
   if (parsed.data.clientMatchId) {
@@ -144,6 +148,7 @@ export async function removeReportItemAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   const { error } = await supabase.from("report_items").delete().eq("id", id.data);
   if (error) {

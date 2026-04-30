@@ -27,6 +27,7 @@ import {
   listStakeholders,
   listTasksBySourceItem,
 } from "@/lib/server/queries";
+import { safeHttpUrl } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,8 @@ export default async function IntelligenceDetailPage({ params }: PageProps) {
   if (!sourceItem) {
     notFound();
   }
+
+  const sourceUrl = safeHttpUrl(sourceItem.url);
 
   const aiOutputsByMatch = new Map<
     string,
@@ -132,10 +135,10 @@ export default async function IntelligenceDetailPage({ params }: PageProps) {
             </div>
             <p className="text-slate-700">Published: {sourceItem.published_date || "Unknown"}</p>
             <p className="text-slate-700">Source: {sourceItem.source_name || "Unknown source"}</p>
-            {sourceItem.url ? (
+            {sourceUrl ? (
               <p>
-                <a className="text-blue-700 underline" href={sourceItem.url} rel="noreferrer" target="_blank">
-                  {sourceItem.url}
+                <a className="text-blue-700 underline" href={sourceUrl} rel="noreferrer" target="_blank">
+                  {sourceUrl}
                 </a>
               </p>
             ) : null}

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { isSafeInternalPath } from "@/lib/server/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -22,9 +23,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const nextPath = isSafeInternalPath(params.next) ? params.next : undefined;
 
   if (user) {
-    redirect(params.next || "/dashboard");
+    redirect(nextPath || "/dashboard");
   }
 
   return (
@@ -35,7 +37,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </CardHeader>
         <CardContent>
           <form action={signInWithPasswordAction} className="space-y-4">
-            <input name="next" type="hidden" value={params.next || ""} />
+            <input name="next" type="hidden" value={nextPath || ""} />
             {params.error ? (
               <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
                 {params.error}

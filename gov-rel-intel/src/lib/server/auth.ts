@@ -1,0 +1,22 @@
+import "server-only";
+
+import { redirect } from "next/navigation";
+
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export function isSafeInternalPath(path: string | undefined) {
+  return Boolean(path && path.startsWith("/") && !path.startsWith("//"));
+}
+
+export async function requireAuthenticatedUser() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  return user;
+}

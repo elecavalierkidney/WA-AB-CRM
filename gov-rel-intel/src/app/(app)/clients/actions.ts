@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { requireAuthenticatedUser } from "@/lib/server/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const clientSchema = z.object({
@@ -30,6 +31,7 @@ export async function createClientAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   await supabase.from("clients").insert({
     name: parsed.data.name,
@@ -59,6 +61,7 @@ export async function updateClientAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   await supabase
     .from("clients")
@@ -82,6 +85,7 @@ export async function setClientActiveAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   await supabase.from("clients").update({ active: active.data }).eq("id", id.data);
 
@@ -105,6 +109,7 @@ export async function createWatchlistItemAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   await supabase.from("client_watchlists").insert({
     client_id: clientId.data,
@@ -133,6 +138,7 @@ export async function updateWatchlistItemAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   await supabase
     .from("client_watchlists")
@@ -154,6 +160,7 @@ export async function deleteWatchlistItemAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   await supabase.from("client_watchlists").delete().eq("id", id.data);
 

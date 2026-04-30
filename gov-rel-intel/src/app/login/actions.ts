@@ -4,11 +4,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { safeInternalPathSchema } from "@/lib/validation";
 
 const signInSchema = z.object({
   email: z.string().trim().email(),
   password: z.string().min(8).max(200),
-  next: z.string().startsWith("/").optional(),
+  next: safeInternalPathSchema.optional(),
 });
 
 function loginError(message: string): never {

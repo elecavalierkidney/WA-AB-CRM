@@ -10,7 +10,9 @@ import {
   STRATEGIC_VALUES,
   STAKEHOLDER_TYPES,
 } from "@/lib/constants";
+import { requireAuthenticatedUser } from "@/lib/server/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { httpUrlSchema } from "@/lib/validation";
 
 const stakeholderSchema = z.object({
   firstName: z.string().trim().max(120).optional(),
@@ -23,8 +25,8 @@ const stakeholderSchema = z.object({
   stakeholderType: z.enum(STAKEHOLDER_TYPES).optional(),
   email: z.string().trim().email().max(320).optional(),
   phone: z.string().trim().max(80).optional(),
-  linkedinUrl: z.string().trim().url().max(1200).optional(),
-  websiteUrl: z.string().trim().url().max(1200).optional(),
+  linkedinUrl: httpUrlSchema.optional(),
+  websiteUrl: httpUrlSchema.optional(),
   bio: z.string().trim().max(8000).optional(),
   notes: z.string().trim().max(8000).optional(),
 });
@@ -95,6 +97,7 @@ export async function createStakeholderAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   await supabase.from("stakeholders").insert({
     first_name: parsed.data.firstName || null,
@@ -143,6 +146,7 @@ export async function updateStakeholderAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   await supabase
     .from("stakeholders")
@@ -176,6 +180,7 @@ export async function setStakeholderActiveAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   await supabase.from("stakeholders").update({ active: active.data }).eq("id", id.data);
 
@@ -204,6 +209,7 @@ export async function upsertRelationshipAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
 
   if (relationshipId.success && relationshipId.data) {
@@ -257,6 +263,7 @@ export async function deleteRelationshipAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   await supabase.from("stakeholder_relationships").delete().eq("id", relationshipId.data);
 
@@ -290,6 +297,7 @@ export async function createInteractionAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   await supabase.from("interactions").insert({
     stakeholder_id: parsed.data.stakeholderId,
@@ -346,6 +354,7 @@ export async function createStakeholderTaskAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   await supabase.from("tasks").insert({
     title: parsed.data.title,

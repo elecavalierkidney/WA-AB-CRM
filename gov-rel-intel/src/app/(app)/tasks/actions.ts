@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { requireAuthenticatedUser } from "@/lib/server/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const taskSchema = z.object({
@@ -34,6 +35,7 @@ export async function createTaskAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   await supabase.from("tasks").insert({
     title: parsed.data.title,
@@ -62,6 +64,7 @@ export async function setTaskStatusAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   await supabase
     .from("tasks")

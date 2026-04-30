@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { generateClientUpdate, generateMeetingRequest } from "@/lib/ai";
+import { requireAuthenticatedUser } from "@/lib/server/auth";
 import { analyzeSourceItemWithAI } from "@/lib/server/ai-analysis";
 import { runKeywordMatchingForSourceItem } from "@/lib/server/matching";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { httpUrlSchema } from "@/lib/validation";
 import { CLIENT_UPDATE_PROMPT_VERSION } from "@/prompts/client-update";
 import { MEETING_REQUEST_PROMPT_VERSION } from "@/prompts/meeting-request";
 
@@ -14,7 +16,7 @@ const sourceSchema = z.object({
   title: z.string().trim().min(3).max(400),
   sourceType: z.string().trim().min(2).max(120),
   sourceName: z.string().trim().max(200).optional(),
-  url: z.string().trim().url().max(1200).optional(),
+  url: httpUrlSchema.optional(),
   publishedDate: z.string().optional(),
   rawText: z.string().trim().min(10),
   cleanText: z.string().trim().optional(),
@@ -101,6 +103,7 @@ export async function createSourceItemAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   const cleanText = buildCleanText(parsed.data.rawText, parsed.data.cleanText);
 
@@ -154,6 +157,7 @@ export async function rerunMatchingAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   try {
     await analyzeSourceItemWithAI(sourceItemId.data);
   } catch {
@@ -175,6 +179,7 @@ export async function updateClientMatchStatusAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   const { error } = await supabase.from("client_matches").update({ status: status.data }).eq("id", matchId.data);
   if (error) {
@@ -205,6 +210,7 @@ export async function createTaskFromIntelligenceAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   const { error } = await supabase.from("tasks").insert({
     title: parsed.data.title,
@@ -240,6 +246,7 @@ export async function linkStakeholderToIntelligenceAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   const today = new Date().toISOString().slice(0, 10);
   const { error } = await supabase.from("interactions").insert({
@@ -274,6 +281,7 @@ export async function addClientMatchToReportAction(formData: FormData) {
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   let reportId = parsed.data.reportId;
 
@@ -354,6 +362,7 @@ export async function generateMeetingRequestFromIntelligenceAction(formData: For
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   const [{ data: match }, { data: stakeholder }, { data: sourceItem }] = await Promise.all([
     supabase
@@ -412,6 +421,7 @@ export async function generateClientUpdateFromIntelligenceAction(formData: FormD
     return;
   }
 
+  await requireAuthenticatedUser();
   const supabase = createSupabaseAdminClient();
   const [{ data: match }, { data: sourceItem }] = await Promise.all([
     supabase
