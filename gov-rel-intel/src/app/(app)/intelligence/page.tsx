@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BellDot, FilePlus2, Filter, RadioTower, Sparkles, Target } from "lucide-react";
 
 import { createSourceItemAction, rerunMatchingAction, updateClientMatchStatusAction } from "@/app/(app)/intelligence/actions";
 import { PageHeader } from "@/components/page-header";
@@ -87,6 +88,9 @@ export default async function IntelligencePage({ searchParams }: PageProps) {
     listSourceItems(),
     listIntelligenceMatches(filters),
   ]);
+  const highRelevanceCount = matches.filter((match) => (match.relevance_score ?? 0) >= 75).length;
+  const actionRequiredCount = matches.filter((match) => match.status === "Action required").length;
+  const newMatchCount = matches.filter((match) => match.status === "New").length;
   const topics = Array.from(
     new Set(
       matches.flatMap((match) => {
@@ -99,14 +103,64 @@ export default async function IntelligencePage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Intelligence Feed"
+        title="Intelligence feed"
         description="Ingest source items, run keyword-based client matching, and triage relevance."
       />
 
-      <section className="grid gap-4 lg:grid-cols-[1fr_2fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Add Source Item</CardTitle>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="border border-slate-200 bg-white">
+          <CardContent className="flex items-center justify-between gap-3 py-4">
+            <div>
+              <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Source items</p>
+              <p className="mt-1 text-3xl font-semibold text-slate-950">{sourceItems.length}</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-700">
+              <RadioTower className="h-4 w-4" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border border-slate-200 bg-white">
+          <CardContent className="flex items-center justify-between gap-3 py-4">
+            <div>
+              <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Matched items</p>
+              <p className="mt-1 text-3xl font-semibold text-slate-950">{matches.length}</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-blue-200 bg-blue-50 text-blue-700">
+              <Target className="h-4 w-4" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border border-slate-200 bg-white">
+          <CardContent className="flex items-center justify-between gap-3 py-4">
+            <div>
+              <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">High relevance</p>
+              <p className="mt-1 text-3xl font-semibold text-slate-950">{highRelevanceCount}</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-rose-200 bg-rose-50 text-rose-700">
+              <Sparkles className="h-4 w-4" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border border-slate-200 bg-white">
+          <CardContent className="flex items-center justify-between gap-3 py-4">
+            <div>
+              <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Action required</p>
+              <p className="mt-1 text-3xl font-semibold text-slate-950">{actionRequiredCount}</p>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700">
+              <BellDot className="h-4 w-4" />
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[minmax(22rem,0.9fr)_2fr]">
+        <Card className="border border-slate-200 bg-white">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-950">
+              <FilePlus2 className="h-4 w-4 text-emerald-700" />
+              Add source item
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <form action={createSourceItemAction} className="space-y-3">
@@ -159,68 +213,79 @@ export default async function IntelligencePage({ searchParams }: PageProps) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Source Items ({sourceItems.length})</CardTitle>
+        <Card className="border border-slate-200 bg-white">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle className="text-base font-semibold text-slate-950">Source items</CardTitle>
+            <p className="text-sm text-slate-600">{sourceItems.length} items in the monitoring feed</p>
           </CardHeader>
           <CardContent>
             {sourceItems.length === 0 ? (
-              <p className="text-sm text-slate-600">No source items yet.</p>
+              <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-600">
+                No source items yet.
+              </p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Source type</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Matches</TableHead>
-                    <TableHead>Top score</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sourceItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">
-                        <Link className="hover:underline" href={`/intelligence/${item.id}`}>
-                          {item.title}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <StatusPill
-                          className={SOURCE_TYPE_STYLES[item.source_type] ?? "bg-slate-100 text-slate-700 border-slate-200"}
-                          label={item.source_type}
-                        />
-                      </TableCell>
-                      <TableCell>{item.published_date || "—"}</TableCell>
-                      <TableCell>{item.matchesCount}</TableCell>
-                      <TableCell>{item.topRelevance}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/intelligence/${item.id}`}>Open</Link>
-                          </Button>
-                          <form action={rerunMatchingAction}>
-                            <input name="sourceItemId" type="hidden" value={item.id} />
-                            <Button size="sm" type="submit" variant="ghost">
-                              Re-run AI
-                            </Button>
-                          </form>
-                        </div>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Source type</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Matches</TableHead>
+                      <TableHead>Top score</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {sourceItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          <div className="min-w-64">
+                            <Link className="font-semibold text-slate-950 hover:underline" href={`/intelligence/${item.id}`}>
+                              {item.title}
+                            </Link>
+                            <p className="text-xs text-slate-500">{item.source_name || "Unknown source"}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <StatusPill
+                            className={SOURCE_TYPE_STYLES[item.source_type] ?? "bg-slate-100 text-slate-700 border-slate-200"}
+                            label={item.source_type}
+                          />
+                        </TableCell>
+                        <TableCell>{item.published_date || "—"}</TableCell>
+                        <TableCell>{item.matchesCount}</TableCell>
+                        <TableCell>{item.topRelevance}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button asChild size="sm" variant="outline">
+                              <Link href={`/intelligence/${item.id}`}>Open</Link>
+                            </Button>
+                            <form action={rerunMatchingAction}>
+                              <input name="sourceItemId" type="hidden" value={item.id} />
+                              <Button size="sm" type="submit" variant="ghost">
+                                Re-run AI
+                              </Button>
+                            </form>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
       </section>
 
       <section className="space-y-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Filters</CardTitle>
+        <Card className="border border-slate-200 bg-white">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-950">
+              <Filter className="h-4 w-4 text-slate-600" />
+              Filters
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <form className="grid gap-3 lg:grid-cols-4" method="get">
@@ -317,76 +382,94 @@ export default async function IntelligencePage({ searchParams }: PageProps) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Matched Intelligence ({matches.length})</CardTitle>
+        <Card className="border border-slate-200 bg-white">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle className="text-base font-semibold text-slate-950">Matched intelligence</CardTitle>
+            <p className="text-sm text-slate-600">
+              {matches.length} visible matches, {newMatchCount} new, {actionRequiredCount} action required.
+            </p>
           </CardHeader>
           <CardContent>
             {matches.length === 0 ? (
-              <p className="text-sm text-slate-600">No matched items for the current filters.</p>
+              <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-600">
+                No matched items for the current filters.
+              </p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Source item</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Score</TableHead>
-                    <TableHead>Matched keywords</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {matches.map((match) => {
-                    const source = readSource(match.source_items);
-                    const clientName = readName(match.clients) ?? "Unknown client";
-                    return (
-                      <TableRow key={match.id}>
-                        <TableCell>
-                          <div>
-                            <Link className="font-medium hover:underline" href={`/intelligence/${match.source_item_id}`}>
-                              {source.title ?? "Untitled source"}
-                            </Link>
-                          <div className="mt-1 flex gap-2 text-xs text-slate-500">
-                              <span>{source.published_date || "No date"}</span>
-                              <span>•</span>
-                              <span>{source.source_name || source.source_type || "Unknown source"}</span>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Source item</TableHead>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Score</TableHead>
+                      <TableHead>Matched keywords</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {matches.map((match) => {
+                      const source = readSource(match.source_items);
+                      const clientName = readName(match.clients) ?? "Unknown client";
+                      return (
+                        <TableRow key={match.id}>
+                          <TableCell>
+                            <div className="min-w-80">
+                              <Link className="font-semibold text-slate-950 hover:underline" href={`/intelligence/${match.source_item_id}`}>
+                                {source.title ?? "Untitled source"}
+                              </Link>
+                            <div className="mt-1 flex gap-2 text-xs text-slate-500">
+                                <span>{source.published_date || "No date"}</span>
+                                <span>|</span>
+                                <span>{source.source_name || source.source_type || "Unknown source"}</span>
+                              </div>
+                              {source.summary ? (
+                                <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-600">{source.summary}</p>
+                              ) : null}
                             </div>
-                            {source.summary ? (
-                              <p className="mt-1 text-xs text-slate-600">{source.summary}</p>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell>{clientName}</TableCell>
-                        <TableCell>{match.relevance_score ?? "—"}</TableCell>
-                        <TableCell>{(match.matched_keywords ?? []).join(", ") || "—"}</TableCell>
-                        <TableCell>
-                          <StatusPill
-                            className={CLIENT_MATCH_STATUS_STYLES[match.status] ?? "bg-slate-100 text-slate-700 border-slate-200"}
-                            label={match.status}
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <form action={updateClientMatchStatusAction} className="flex justify-end gap-2">
-                            <input name="matchId" type="hidden" value={match.id} />
-                            <input name="sourceItemId" type="hidden" value={match.source_item_id} />
-                            <select className="rounded-md border border-slate-300 p-2 text-xs" defaultValue={match.status} name="status">
-                              {CLIENT_MATCH_STATUSES.map((status) => (
-                                <option key={status} value={status}>
-                                  {status}
-                                </option>
-                              ))}
-                            </select>
-                            <Button size="sm" type="submit" variant="outline">
-                              Save
-                            </Button>
-                          </form>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                          </TableCell>
+                          <TableCell>{clientName}</TableCell>
+                          <TableCell>
+                            <StatusPill
+                              className={
+                                (match.relevance_score ?? 0) >= 75
+                                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                                  : "border-blue-200 bg-blue-50 text-blue-700"
+                              }
+                              label={`${match.relevance_score ?? 0}`}
+                            />
+                          </TableCell>
+                          <TableCell className="max-w-56 text-xs text-slate-600">
+                            {(match.matched_keywords ?? []).join(", ") || "—"}
+                          </TableCell>
+                          <TableCell>
+                            <StatusPill
+                              className={CLIENT_MATCH_STATUS_STYLES[match.status] ?? "bg-slate-100 text-slate-700 border-slate-200"}
+                              label={match.status}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <form action={updateClientMatchStatusAction} className="flex justify-end gap-2">
+                              <input name="matchId" type="hidden" value={match.id} />
+                              <input name="sourceItemId" type="hidden" value={match.source_item_id} />
+                              <select className="rounded-md border border-slate-300 p-2 text-xs" defaultValue={match.status} name="status">
+                                {CLIENT_MATCH_STATUSES.map((status) => (
+                                  <option key={status} value={status}>
+                                    {status}
+                                  </option>
+                                ))}
+                              </select>
+                              <Button size="sm" type="submit" variant="outline">
+                                Save
+                              </Button>
+                            </form>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>

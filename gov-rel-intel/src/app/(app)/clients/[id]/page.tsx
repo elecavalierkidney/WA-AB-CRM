@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BellDot, Settings, Users } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -46,9 +47,9 @@ export default async function ClientDetailPage({ params }: PageProps) {
       />
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Client Profile</CardTitle>
+        <Card className="border border-slate-200 bg-white">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle className="text-base font-semibold text-slate-950">Client profile</CardTitle>
           </CardHeader>
           <CardContent>
             <form action={updateClientAction} className="space-y-3">
@@ -80,13 +81,15 @@ export default async function ClientDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Watchlist Snapshot</CardTitle>
+        <Card className="border border-slate-200 bg-white">
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle className="text-base font-semibold text-slate-950">Watchlist snapshot</CardTitle>
           </CardHeader>
           <CardContent>
             {watchlist.length === 0 ? (
-              <p className="text-sm text-slate-600">No watchlist terms yet.</p>
+              <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-600">
+                No watchlist terms yet.
+              </p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {watchlist.slice(0, 12).map((item) => (
@@ -100,16 +103,28 @@ export default async function ClientDetailPage({ params }: PageProps) {
         </Card>
       </div>
 
-      <section className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-3">
-        <Button asChild variant="ghost">
-          <Link href={`/clients/${id}/intelligence`}>Client Intelligence</Link>
-        </Button>
-        <Button asChild variant="ghost">
-          <Link href={`/clients/${id}/stakeholders`}>Client Stakeholders</Link>
-        </Button>
-        <Button asChild variant="ghost">
-          <Link href={`/clients/${id}/watchlist`}>Watchlist Terms</Link>
-        </Button>
+      <section className="grid gap-3 sm:grid-cols-3">
+        <Link
+          className="flex items-center gap-3 rounded-md border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-800 transition hover:-translate-y-0.5 hover:shadow-md"
+          href={`/clients/${id}/intelligence`}
+        >
+          <BellDot className="h-4 w-4 text-amber-600" />
+          Client intelligence
+        </Link>
+        <Link
+          className="flex items-center gap-3 rounded-md border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-800 transition hover:-translate-y-0.5 hover:shadow-md"
+          href={`/clients/${id}/stakeholders`}
+        >
+          <Users className="h-4 w-4 text-blue-600" />
+          Client stakeholders
+        </Link>
+        <Link
+          className="flex items-center gap-3 rounded-md border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-800 transition hover:-translate-y-0.5 hover:shadow-md"
+          href={`/clients/${id}/watchlist`}
+        >
+          <Settings className="h-4 w-4 text-emerald-700" />
+          Watchlist terms
+        </Link>
       </section>
     </div>
   );
