@@ -7,11 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { listClients } from "@/lib/server/queries";
 
-import { createClientAction, setClientActiveAction } from "./actions";
+import { createClientAction, deleteClientAction, setClientActiveAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -127,64 +126,82 @@ export default async function ClientsPage() {
                 No clients yet. Create the first one from the form.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Client</TableHead>
-                      <TableHead>Industry</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Recent matches</TableHead>
-                      <TableHead>Open tasks</TableHead>
-                      <TableHead>Last updated</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {clients.map((client) => (
-                      <TableRow key={client.id}>
-                        <TableCell>
-                          <div className="min-w-48">
-                            <Link className="font-semibold text-slate-950 hover:underline" href={`/clients/${client.id}`}>
-                              {client.name}
-                            </Link>
-                            {client.primary_contact ? (
-                              <p className="text-xs text-slate-500">{client.primary_contact}</p>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell>{client.industry || "—"}</TableCell>
-                        <TableCell>
+              <div className="grid gap-3">
+                {clients.map((client) => (
+                  <div
+                    className="rounded-md border border-slate-200 bg-slate-50/60 p-4"
+                    key={client.id}
+                  >
+                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto] xl:items-start">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Link
+                            className="break-words text-base font-semibold text-slate-950 hover:underline"
+                            href={`/clients/${client.id}`}
+                          >
+                            {client.name}
+                          </Link>
                           <StatusPill
                             className={
                               client.active
                                 ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                                 : "border-slate-200 bg-slate-100 text-slate-600"
                             }
-                            label={client.active ? "Active" : "Inactive"}
+                            label={client.active ? "Active" : "Archived"}
                           />
-                        </TableCell>
-                        <TableCell>{client.recentMatches}</TableCell>
-                        <TableCell>{client.openTasks}</TableCell>
-                        <TableCell>{new Date(client.updated_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <div className="flex justify-end gap-2">
-                            <Button asChild size="sm" variant="outline">
-                              <Link href={`/clients/${client.id}`}>Open</Link>
-                            </Button>
-                            <form action={setClientActiveAction}>
+                        </div>
+                        <p className="mt-1 text-sm text-slate-600">{client.industry || "No industry set"}</p>
+                        {client.primary_contact ? (
+                          <p className="mt-1 text-xs text-slate-500">Primary contact: {client.primary_contact}</p>
+                        ) : null}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 sm:max-w-lg">
+                        <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                          <p className="text-[0.7rem] font-semibold tracking-wide text-slate-500 uppercase">Matches</p>
+                          <p className="mt-1 text-lg font-semibold text-slate-950">{client.recentMatches}</p>
+                        </div>
+                        <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                          <p className="text-[0.7rem] font-semibold tracking-wide text-slate-500 uppercase">Tasks</p>
+                          <p className="mt-1 text-lg font-semibold text-slate-950">{client.openTasks}</p>
+                        </div>
+                        <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                          <p className="text-[0.7rem] font-semibold tracking-wide text-slate-500 uppercase">Updated</p>
+                          <p className="mt-1 text-sm font-semibold text-slate-950">
+                            {new Date(client.updated_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="relative flex flex-wrap gap-2 xl:justify-end">
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/clients/${client.id}`}>Open</Link>
+                        </Button>
+                        <form action={setClientActiveAction}>
+                          <input name="id" type="hidden" value={client.id} />
+                          <input name="active" type="hidden" value={client.active ? "false" : "true"} />
+                          <Button size="sm" type="submit" variant="ghost">
+                            {client.active ? "Archive" : "Activate"}
+                          </Button>
+                        </form>
+                        <details className="group/delete">
+                          <summary className="inline-flex h-7 cursor-pointer list-none items-center justify-center rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] font-medium text-destructive transition hover:bg-muted">
+                            Delete
+                          </summary>
+                          <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-800 xl:absolute xl:right-4 xl:z-10 xl:w-64">
+                            <p>This permanently removes the client file and linked client records.</p>
+                            <form action={deleteClientAction} className="mt-2">
                               <input name="id" type="hidden" value={client.id} />
-                              <input name="active" type="hidden" value={client.active ? "false" : "true"} />
-                              <Button size="sm" type="submit" variant="ghost">
-                                {client.active ? "Archive" : "Activate"}
+                              <Button size="sm" type="submit" variant="destructive">
+                                Confirm delete
                               </Button>
                             </form>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        </details>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

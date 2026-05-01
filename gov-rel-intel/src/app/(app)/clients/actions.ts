@@ -94,6 +94,24 @@ export async function setClientActiveAction(formData: FormData) {
   revalidatePath(`/clients/${id.data}`);
 }
 
+export async function deleteClientAction(formData: FormData) {
+  const id = z.string().uuid().safeParse(formData.get("id"));
+
+  if (!id.success) {
+    return;
+  }
+
+  await requireAuthenticatedUser();
+  const supabase = createSupabaseAdminClient();
+  await supabase.from("clients").delete().eq("id", id.data);
+
+  revalidatePath("/dashboard");
+  revalidatePath("/clients");
+  revalidatePath("/intelligence");
+  revalidatePath("/reports");
+  revalidatePath("/tasks");
+}
+
 export async function createWatchlistItemAction(formData: FormData) {
   const clientId = z.string().uuid().safeParse(formData.get("clientId"));
   if (!clientId.success) {
