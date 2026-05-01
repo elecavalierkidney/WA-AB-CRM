@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import {
+  GOVERNMENT_STAKEHOLDER_TYPES,
   INTERACTION_TYPES,
   POSITION_ON_ISSUE_VALUES,
   RELATIONSHIP_STRENGTHS,
@@ -75,6 +77,172 @@ const stakeholderTaskSchema = z.object({
   priority: z.enum(["Low", "Medium", "High", "Urgent"]),
 });
 
+type DirectoryRow = Record<string, unknown>;
+type ParsedGovernmentContact = z.infer<typeof stakeholderSchema>;
+
+function rowsFromCells(cells: unknown[][]) {
+  const [headers, ...body] = cells;
+  if (!headers) {
+    return [];
+  }
+
+  return body.map((row) => {
+    const item: DirectoryRow = {};
+    headers.forEach((header, index) => {
+      if (header !== null && header !== undefined && String(header).trim()) {
+        item[String(header)] = row[index] ?? "";
+      }
+    });
+    return item;
+  });
+}
+
+function parseCsv(text: string) {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+
+    if (char === '"' && quoted && next === '"') {
+      cell += '"';
+      index += 1;
+      continue;
+    }
+    if (char === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    if (char === "," && !quoted) {
+      row.push(cell);
+      cell = "";
+      continue;
+    }
+    if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") {
+        index += 1;
+      }
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+      continue;
+    }
+
+    cell += char;
+  }
+
+  row.push(cell);
+  rows.push(row);
+  return rows.filter((csvRow) => csvRow.some((value) => value.trim()));
+}
+
+async function readDirectoryRows(file: File) {
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const lowerName = file.name.toLowerCase();
+
+  if (lowerName.endsWith(".csv") || file.type === "text/csv") {
+    return rowsFromCells(parseCsv(buffer.toString("utf8")));
+  }
+
+  const { readSheet } = await import("read-excel-file/node");
+  return rowsFromCells((await readSheet(buffer)) as unknown[][]);
+}
+
+function normalizeRow(row: DirectoryRow) {
+  const normalized: DirectoryRow = {};
+
+  for (const [key, value] of Object.entries(row)) {
+    const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    normalized[normalizedKey] = value;
+  }
+
+  return normalized;
+}
+
+function readText(row: DirectoryRow, aliases: string[]) {
+  for (const alias of aliases) {
+    const value = row[alias];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+    if (typeof value === "number") {
+      return String(value);
+    }
+  }
+
+  return undefined;
+}
+
+function splitName(fullName: string) {
+  const parts = fullName.split(/\s+/).filter(Boolean);
+  if (parts.length < 2) {
+    return { firstName: undefined, lastName: undefined };
+  }
+
+  return {
+    firstName: parts.slice(0, -1).join(" "),
+    lastName: parts.at(-1),
+  };
+}
+
+function normalizeGovernmentType(value: string | undefined) {
+  if (!value) {
+    return "Department Official";
+  }
+
+  const exact = GOVERNMENT_STAKEHOLDER_TYPES.find((type) => type.toLowerCase() === value.toLowerCase());
+  if (exact) {
+    return exact;
+  }
+
+  const normalized = value.toLowerCase();
+  if (normalized.includes("premier")) return "Premier";
+  if (normalized.includes("associate minister")) return "Associate Minister";
+  if (normalized.includes("minister")) return "Minister";
+  if (normalized.includes("parliamentary")) return "Parliamentary Secretary";
+  if (normalized.includes("mla") || normalized.includes("member of legislative")) return "MLA";
+  if (normalized.includes("chief of staff")) return "Chief of Staff";
+  if (normalized.includes("staff")) return "Political Staff";
+  if (normalized.includes("deputy minister")) return "Deputy Minister";
+  if (normalized.includes("assistant deputy")) return "Assistant Deputy Minister";
+  if (normalized.includes("municipal") && normalized.includes("elected")) return "Municipal Elected Official";
+  if (normalized.includes("municipal")) return "Municipal Administrator";
+  if (normalized.includes("federal") && normalized.includes("staff")) return "Federal Staff";
+  if (normalized.includes("federal")) return "Federal Elected Official";
+  return "Department Official";
+}
+
+function parseGovernmentContact(row: DirectoryRow) {
+  const normalized = normalizeRow(row);
+  const firstName = readText(normalized, ["firstname", "givenname", "first"]);
+  const lastName = readText(normalized, ["lastname", "surname", "familyname", "last"]);
+  const fullName =
+    readText(normalized, ["fullname", "name", "contact", "contactname", "displayname", "membername"]) ||
+    [firstName, lastName].filter(Boolean).join(" ");
+  const fallbackNames = fullName ? splitName(fullName) : { firstName: undefined, lastName: undefined };
+
+  return stakeholderSchema.safeParse({
+    firstName: firstName || fallbackNames.firstName,
+    lastName: lastName || fallbackNames.lastName,
+    fullName,
+    title: readText(normalized, ["title", "jobtitle", "role", "position"]),
+    organization: readText(normalized, ["organization", "organisation", "office", "agency", "department"]),
+    ministry: readText(normalized, ["ministry", "department", "portfolio"]),
+    riding: readText(normalized, ["riding", "constituency", "district", "ward"]),
+    stakeholderType: normalizeGovernmentType(readText(normalized, ["type", "contacttype", "category", "classification"])),
+    email: readText(normalized, ["email", "emailaddress", "mail"]) || undefined,
+    phone: readText(normalized, ["phone", "phonenumber", "telephone", "mobile", "cell"]) || undefined,
+    linkedinUrl: readText(normalized, ["linkedin", "linkedinurl"]) || undefined,
+    websiteUrl: readText(normalized, ["website", "websiteurl", "url"]) || undefined,
+    bio: readText(normalized, ["bio", "biography", "profile"]),
+    notes: readText(normalized, ["notes", "note", "comments", "description"]),
+  });
+}
+
 export async function createStakeholderAction(formData: FormData) {
   const parsed = stakeholderSchema.safeParse({
     firstName: formData.get("firstName"),
@@ -107,7 +275,7 @@ export async function createStakeholderAction(formData: FormData) {
     organization: parsed.data.organization || null,
     ministry: parsed.data.ministry || null,
     riding: parsed.data.riding || null,
-    stakeholder_type: parsed.data.stakeholderType || null,
+    stakeholder_type: parsed.data.stakeholderType || "Department Official",
     email: parsed.data.email || null,
     phone: parsed.data.phone || null,
     linkedin_url: parsed.data.linkedinUrl || null,
@@ -117,6 +285,70 @@ export async function createStakeholderAction(formData: FormData) {
   });
 
   revalidatePath("/stakeholders");
+}
+
+export async function importGovernmentContactsAction(formData: FormData) {
+  const file = formData.get("directory");
+  if (!(file instanceof File) || file.size === 0) {
+    redirect("/stakeholders?imported=0&skipped=0&error=missing-file");
+  }
+
+  await requireAuthenticatedUser();
+
+  const rows = await readDirectoryRows(file);
+  const parsedRows = rows.map(parseGovernmentContact);
+  const contacts = parsedRows
+    .filter((row): row is { success: true; data: ParsedGovernmentContact } => row.success)
+    .map((row) => row.data);
+
+  if (contacts.length === 0) {
+    redirect(`/stakeholders?imported=0&skipped=${rows.length}&error=no-valid-rows`);
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data: existing } = await supabase.from("stakeholders").select("full_name, organization, email");
+  const seen = new Set(
+    (existing ?? []).map((contact) =>
+      contact.email
+        ? `email:${contact.email.toLowerCase()}`
+        : `name:${contact.full_name.toLowerCase()}|${(contact.organization ?? "").toLowerCase()}`,
+    ),
+  );
+  const inserted = [];
+
+  for (const contact of contacts) {
+    const key = contact.email
+      ? `email:${contact.email.toLowerCase()}`
+      : `name:${contact.fullName.toLowerCase()}|${(contact.organization ?? "").toLowerCase()}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    inserted.push({
+      first_name: contact.firstName || null,
+      last_name: contact.lastName || null,
+      full_name: contact.fullName,
+      title: contact.title || null,
+      organization: contact.organization || null,
+      ministry: contact.ministry || null,
+      riding: contact.riding || null,
+      stakeholder_type: contact.stakeholderType || "Department Official",
+      email: contact.email || null,
+      phone: contact.phone || null,
+      linkedin_url: contact.linkedinUrl || null,
+      website_url: contact.websiteUrl || null,
+      bio: contact.bio || null,
+      notes: contact.notes || null,
+    });
+  }
+
+  if (inserted.length > 0) {
+    await supabase.from("stakeholders").insert(inserted);
+  }
+
+  revalidatePath("/stakeholders");
+  revalidatePath("/contacts");
+  redirect(`/stakeholders?imported=${inserted.length}&skipped=${rows.length - inserted.length}`);
 }
 
 export async function updateStakeholderAction(formData: FormData) {
@@ -158,7 +390,7 @@ export async function updateStakeholderAction(formData: FormData) {
       organization: parsed.data.organization || null,
       ministry: parsed.data.ministry || null,
       riding: parsed.data.riding || null,
-      stakeholder_type: parsed.data.stakeholderType || null,
+      stakeholder_type: parsed.data.stakeholderType || "Department Official",
       email: parsed.data.email || null,
       phone: parsed.data.phone || null,
       linkedin_url: parsed.data.linkedinUrl || null,

@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ContactRound, FileSpreadsheet, Mail, Phone, Plus, Upload } from "lucide-react";
+import { ContactRound, FileSpreadsheet, Mail, Phone, Plus } from "lucide-react";
 
-import { createContactAction, importContactsAction } from "@/app/(app)/contacts/actions";
+import { createContactAction } from "@/app/(app)/contacts/actions";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Button } from "@/components/ui/button";
@@ -21,9 +21,6 @@ interface PageProps {
     organization?: string;
     stakeholderType?: string;
     active?: "active" | "inactive" | "all";
-    imported?: string;
-    skipped?: string;
-    error?: string;
   }>;
 }
 
@@ -44,23 +41,13 @@ export default async function ContactsPage({ searchParams }: PageProps) {
     <div className="space-y-6">
       <PageHeader
         title="Contacts"
-        description="Manage general contacts and import directory spreadsheets into the workspace."
+        description="Manage client, association, media, and other non-government contacts."
         actions={
           <Button asChild size="sm" variant="outline">
             <Link href="/stakeholders">Government contacts</Link>
           </Button>
         }
       />
-
-      {filters.imported || filters.error ? (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          {filters.error === "missing-file"
-            ? "Choose a directory spreadsheet before importing."
-            : filters.error === "no-valid-rows"
-              ? "No valid contact rows were found in that spreadsheet."
-              : `Imported ${filters.imported ?? 0} contacts. Skipped ${filters.skipped ?? 0} duplicate or invalid rows.`}
-        </div>
-      ) : null}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="border border-slate-200 bg-white">
@@ -111,29 +98,6 @@ export default async function ContactsPage({ searchParams }: PageProps) {
 
       <section className="grid gap-4 lg:grid-cols-[minmax(20rem,0.85fr)_2fr]">
         <div className="space-y-4">
-          <Card className="border border-slate-200 bg-white">
-            <CardHeader className="border-b border-slate-100 pb-4">
-              <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-950">
-                <Upload className="h-4 w-4 text-emerald-700" />
-                Import directory
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form action={importContactsAction} className="space-y-3">
-                <div className="space-y-1">
-                  <Label htmlFor="directory">Spreadsheet file</Label>
-                  <Input accept=".xlsx,.csv" id="directory" name="directory" required type="file" />
-                </div>
-                <p className="text-xs leading-5 text-slate-500">
-                  Upload an .xlsx or .csv file. Supported columns include name, first name, last name, title, organization, email, phone, type, and notes.
-                </p>
-                <Button className="w-full" type="submit">
-                  Import contacts
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
           <Card className="border border-slate-200 bg-white">
             <CardHeader className="border-b border-slate-100 pb-4">
               <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-950">

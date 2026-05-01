@@ -1,7 +1,11 @@
 import Link from "next/link";
-import { CalendarClock, Filter, Handshake, Plus, UsersRound } from "lucide-react";
+import { CalendarClock, Filter, Handshake, Plus, Upload, UsersRound } from "lucide-react";
 
-import { createStakeholderAction, setStakeholderActiveAction } from "@/app/(app)/stakeholders/actions";
+import {
+  createStakeholderAction,
+  importGovernmentContactsAction,
+  setStakeholderActiveAction,
+} from "@/app/(app)/stakeholders/actions";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Button } from "@/components/ui/button";
@@ -25,6 +29,9 @@ interface PageProps {
     clientId?: string;
     followUpDue?: string;
     active?: "active" | "inactive" | "all";
+    imported?: string;
+    skipped?: string;
+    error?: string;
   }>;
 }
 
@@ -65,11 +72,27 @@ export default async function StakeholdersPage({ searchParams }: PageProps) {
         }
       />
 
+      {filters.imported || filters.error ? (
+        <div
+          className={
+            filters.error
+              ? "rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+              : "rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+          }
+        >
+          {filters.error === "missing-file"
+            ? "Choose a government directory spreadsheet before importing."
+            : filters.error === "no-valid-rows"
+              ? "No valid government contact rows were found in that spreadsheet."
+              : `Imported ${filters.imported ?? 0} government contacts. Skipped ${filters.skipped ?? 0} duplicate or invalid rows.`}
+        </div>
+      ) : null}
+
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="border border-slate-200 bg-white">
           <CardContent className="flex items-center justify-between gap-3 py-4">
             <div>
-              <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Visible stakeholders</p>
+              <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Government contacts</p>
               <p className="mt-1 text-3xl font-semibold text-slate-950">{stakeholders.length}</p>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-slate-700">
@@ -113,15 +136,39 @@ export default async function StakeholdersPage({ searchParams }: PageProps) {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(20rem,0.85fr)_2fr]">
-        <Card className="border border-slate-200 bg-white">
-          <CardHeader className="border-b border-slate-100 pb-4">
-            <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-950">
-              <Plus className="h-4 w-4 text-emerald-700" />
-              Create government contact
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form action={createStakeholderAction} className="space-y-3">
+        <div className="space-y-4">
+          <Card className="border border-slate-200 bg-white">
+            <CardHeader className="border-b border-slate-100 pb-4">
+              <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-950">
+                <Upload className="h-4 w-4 text-emerald-700" />
+                Import government directory
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form action={importGovernmentContactsAction} className="space-y-3">
+                <div className="space-y-1">
+                  <Label htmlFor="directory">Spreadsheet file</Label>
+                  <Input accept=".xlsx,.csv" id="directory" name="directory" required type="file" />
+                </div>
+                <p className="text-xs leading-5 text-slate-500">
+                  Upload an .xlsx or .csv directory. Rows import only into Government contacts. Supported columns include name, first name, last name, title, organization, ministry, riding, email, phone, type, website, LinkedIn, bio, and notes.
+                </p>
+                <Button className="w-full" type="submit">
+                  Import government contacts
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-slate-200 bg-white">
+            <CardHeader className="border-b border-slate-100 pb-4">
+              <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-950">
+                <Plus className="h-4 w-4 text-emerald-700" />
+                Create government contact
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form action={createStakeholderAction} className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label htmlFor="firstName">First name</Label>
@@ -172,15 +219,16 @@ export default async function StakeholdersPage({ searchParams }: PageProps) {
                 <Input id="notes" name="notes" />
               </div>
               <Button className="w-full" type="submit">
-                Save stakeholder
+                Save government contact
               </Button>
             </form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
         <Card className="border border-slate-200 bg-white">
           <CardHeader className="border-b border-slate-100 pb-4">
-            <CardTitle className="text-base font-semibold text-slate-950">Stakeholder directory</CardTitle>
+            <CardTitle className="text-base font-semibold text-slate-950">Government contact directory</CardTitle>
             <p className="text-sm text-slate-600">
               {stakeholders.length} visible, {highValueCount} high-value relationships.
             </p>
@@ -275,7 +323,7 @@ export default async function StakeholdersPage({ searchParams }: PageProps) {
 
             {stakeholders.length === 0 ? (
               <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-600">
-                No stakeholders found for current filters.
+                No government contacts found. Add one manually or import a government directory spreadsheet.
               </p>
             ) : (
               <div className="overflow-x-auto">
