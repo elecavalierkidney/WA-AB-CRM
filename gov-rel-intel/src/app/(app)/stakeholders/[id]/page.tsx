@@ -86,7 +86,7 @@ export default async function StakeholderDetailPage({ params }: PageProps) {
         actions={
           <div className="flex gap-2">
             <Button asChild size="sm" variant="outline">
-              <Link href="/stakeholders">Back to stakeholders</Link>
+              <Link href="/stakeholders">Back to government contacts</Link>
             </Button>
             <form action={setStakeholderActiveAction}>
               <input name="id" type="hidden" value={stakeholder.id} />

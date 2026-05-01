@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { RELATIONSHIP_STRENGTHS, STAKEHOLDER_TYPES, STRATEGIC_VALUES } from "@/lib/constants";
+import { GOVERNMENT_STAKEHOLDER_TYPES, RELATIONSHIP_STRENGTHS, STRATEGIC_VALUES } from "@/lib/constants";
 import { listClients, listStakeholders } from "@/lib/server/queries";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +41,7 @@ export default async function StakeholdersPage({ searchParams }: PageProps) {
     clientId: filters.clientId,
     followUpDue: filters.followUpDue === "true",
     active: filters.active || "all",
+    directoryType: "government",
   });
   const activeCount = stakeholders.filter((stakeholder) => stakeholder.active).length;
   const relationshipCount = stakeholders.reduce(
@@ -55,8 +56,13 @@ export default async function StakeholdersPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Stakeholders"
-        description="Track officials, staff, partners, and contacts across client files."
+        title="Government contacts"
+        description="Track elected officials, political staff, public servants, and public-sector relationships across client files."
+        actions={
+          <Button asChild size="sm" variant="outline">
+            <Link href="/contacts">Contacts</Link>
+          </Button>
+        }
       />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -111,7 +117,7 @@ export default async function StakeholdersPage({ searchParams }: PageProps) {
           <CardHeader className="border-b border-slate-100 pb-4">
             <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-950">
               <Plus className="h-4 w-4 text-emerald-700" />
-              Create stakeholder
+              Create government contact
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -149,7 +155,7 @@ export default async function StakeholdersPage({ searchParams }: PageProps) {
                   <Label htmlFor="stakeholderType">Stakeholder type</Label>
                   <select className="w-full rounded-md border border-slate-300 p-2 text-sm" id="stakeholderType" name="stakeholderType">
                     <option value="">Select type</option>
-                    {STAKEHOLDER_TYPES.map((type) => (
+                    {GOVERNMENT_STAKEHOLDER_TYPES.map((type) => (
                       <option key={type} value={type}>
                         {type}
                       </option>
@@ -192,7 +198,7 @@ export default async function StakeholdersPage({ searchParams }: PageProps) {
                 name="stakeholderType"
               >
                 <option value="">All types</option>
-                {STAKEHOLDER_TYPES.map((type) => (
+                {GOVERNMENT_STAKEHOLDER_TYPES.map((type) => (
                   <option key={type} value={type}>
                     {type}
                   </option>

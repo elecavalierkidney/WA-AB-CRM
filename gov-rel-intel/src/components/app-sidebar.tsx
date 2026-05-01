@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BellDot,
   Building2,
+  ContactRound,
   ClipboardList,
   FileText,
   LayoutDashboard,
@@ -19,7 +20,8 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clients", label: "Clients", icon: Building2 },
   { href: "/intelligence", label: "Intelligence", icon: BellDot },
-  { href: "/stakeholders", label: "Stakeholders", icon: Users },
+  { href: "/contacts", label: "Contacts", icon: ContactRound },
+  { href: "/stakeholders", label: "Government contacts", icon: Users },
   { href: "/tasks", label: "Tasks", icon: ClipboardList },
   { href: "/reports", label: "Reports", icon: FileText },
   { href: "/settings", label: "Settings", icon: Settings },

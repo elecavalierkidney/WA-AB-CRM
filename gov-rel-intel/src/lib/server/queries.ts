@@ -2,7 +2,7 @@ import "server-only";
 
 import { endOfWeek, formatISO, startOfDay } from "date-fns";
 
-import { OPEN_TASK_STATUSES } from "@/lib/constants";
+import { GENERAL_CONTACT_TYPES, GOVERNMENT_STAKEHOLDER_TYPES, OPEN_TASK_STATUSES } from "@/lib/constants";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 
@@ -36,6 +36,7 @@ export interface StakeholderFilters {
   clientId?: string;
   followUpDue?: boolean;
   active?: "active" | "inactive" | "all";
+  directoryType?: "government" | "general" | "all";
 }
 
 export interface TaskFilters {
@@ -506,6 +507,18 @@ export async function listStakeholders(filters: StakeholderFilters = {}) {
       }
 
       if (filters.stakeholderType && row.stakeholder_type !== filters.stakeholderType) {
+        return false;
+      }
+      if (
+        filters.directoryType === "government" &&
+        !GOVERNMENT_STAKEHOLDER_TYPES.includes(row.stakeholder_type as (typeof GOVERNMENT_STAKEHOLDER_TYPES)[number])
+      ) {
+        return false;
+      }
+      if (
+        filters.directoryType === "general" &&
+        !GENERAL_CONTACT_TYPES.includes(row.stakeholder_type as (typeof GENERAL_CONTACT_TYPES)[number])
+      ) {
         return false;
       }
       if (normalizedMinistry && !(row.ministry ?? "").toLowerCase().includes(normalizedMinistry)) {

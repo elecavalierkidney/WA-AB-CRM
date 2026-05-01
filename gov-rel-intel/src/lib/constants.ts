@@ -4,7 +4,8 @@ export const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/clients", label: "Clients" },
   { href: "/intelligence", label: "Intelligence" },
-  { href: "/stakeholders", label: "Stakeholders" },
+  { href: "/contacts", label: "Contacts" },
+  { href: "/stakeholders", label: "Government contacts" },
   { href: "/tasks", label: "Tasks" },
   { href: "/reports", label: "Reports" },
   { href: "/settings", label: "Settings" },
@@ -49,6 +50,30 @@ export const STAKEHOLDER_TYPES = [
   "Municipal Administrator",
   "Federal Elected Official",
   "Federal Staff",
+  "Industry Association",
+  "Client Contact",
+  "Media Contact",
+  "Other",
+] as const;
+
+export const GOVERNMENT_STAKEHOLDER_TYPES = [
+  "Premier",
+  "Minister",
+  "Associate Minister",
+  "Parliamentary Secretary",
+  "MLA",
+  "Chief of Staff",
+  "Political Staff",
+  "Deputy Minister",
+  "Assistant Deputy Minister",
+  "Department Official",
+  "Municipal Elected Official",
+  "Municipal Administrator",
+  "Federal Elected Official",
+  "Federal Staff",
+] as const;
+
+export const GENERAL_CONTACT_TYPES = [
   "Industry Association",
   "Client Contact",
   "Media Contact",
