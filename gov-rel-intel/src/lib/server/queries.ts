@@ -38,6 +38,17 @@ export interface StakeholderFilters {
   active?: "active" | "inactive" | "all";
 }
 
+export interface TaskFilters {
+  query?: string;
+  clientId?: string;
+  stakeholderId?: string;
+  sourceItemId?: string;
+  owner?: string;
+  priority?: string;
+  status?: string;
+  due?: "overdue" | "week" | "unscheduled";
+}
+
 export async function getDashboardStats() {
   const supabase = createSupabaseAdminClient();
 
@@ -222,6 +233,77 @@ export async function listOpenTasks(): Promise<
     stakeholders: { full_name: string } | null;
     source_items: { title: string } | null;
   })[];
+}
+
+export async function listTasks(filters: TaskFilters = {}): Promise<
+  (TaskRow & {
+    clients: { name: string } | null;
+    stakeholders: { full_name: string } | null;
+    source_items: { title: string } | null;
+  })[]
+> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*, clients(name), stakeholders(full_name), source_items(title)")
+    .order("due_date", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  const normalizedQuery = filters.query?.trim().toLowerCase();
+  const normalizedOwner = filters.owner?.trim().toLowerCase();
+  const today = formatISO(new Date(), { representation: "date" });
+  const weekEnd = formatISO(endOfWeek(new Date(), { weekStartsOn: 1 }), { representation: "date" });
+
+  return ((data ?? []) as (TaskRow & {
+    clients: { name: string } | null;
+    stakeholders: { full_name: string } | null;
+    source_items: { title: string } | null;
+  })[]).filter((task) => {
+    if (filters.clientId && task.client_id !== filters.clientId) {
+      return false;
+    }
+    if (filters.stakeholderId && task.stakeholder_id !== filters.stakeholderId) {
+      return false;
+    }
+    if (filters.sourceItemId && task.source_item_id !== filters.sourceItemId) {
+      return false;
+    }
+    if (filters.priority && task.priority !== filters.priority) {
+      return false;
+    }
+    if (filters.status === "open" && !OPEN_TASK_STATUSES.includes(task.status as (typeof OPEN_TASK_STATUSES)[number])) {
+      return false;
+    }
+    if (filters.status && filters.status !== "open" && filters.status !== "all" && task.status !== filters.status) {
+      return false;
+    }
+    if (normalizedOwner && !(task.owner ?? "").toLowerCase().includes(normalizedOwner)) {
+      return false;
+    }
+    if (filters.due === "overdue" && (!task.due_date || task.due_date >= today)) {
+      return false;
+    }
+    if (filters.due === "week" && (!task.due_date || task.due_date > weekEnd)) {
+      return false;
+    }
+    if (filters.due === "unscheduled" && task.due_date) {
+      return false;
+    }
+    if (normalizedQuery) {
+      const haystack = `${task.title} ${task.description ?? ""} ${task.owner ?? ""} ${
+        task.clients?.name ?? ""
+      } ${task.stakeholders?.full_name ?? ""} ${task.source_items?.title ?? ""}`.toLowerCase();
+      if (!haystack.includes(normalizedQuery)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 }
 
 export async function listSourceItems(): Promise<
