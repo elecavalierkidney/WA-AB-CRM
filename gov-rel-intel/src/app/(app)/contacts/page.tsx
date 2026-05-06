@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { ContactRound, FileSpreadsheet, Mail, Phone, Plus } from "lucide-react";
 
-import { createContactAction } from "@/app/(app)/contacts/actions";
+import { createContactAction, deleteContactAction, setContactActiveAction } from "@/app/(app)/contacts/actions";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { GENERAL_CONTACT_TYPES } from "@/lib/constants";
 import { listStakeholders } from "@/lib/server/queries";
@@ -202,48 +201,53 @@ export default async function ContactsPage({ searchParams }: PageProps) {
 
             {contacts.length === 0 ? (
               <p className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-600">
-                No contacts found. Add one manually or import a directory spreadsheet.
+                No contacts found. Add one manually from the form.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Organization</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {contacts.map((contact) => (
-                      <TableRow key={contact.id}>
-                        <TableCell>
-                          <div className="min-w-56">
-                            <p className="font-semibold text-slate-950">{contact.full_name}</p>
-                            {contact.title ? <p className="text-xs text-slate-500">{contact.title}</p> : null}
-                          </div>
-                        </TableCell>
-                        <TableCell>{contact.stakeholder_type || "Other"}</TableCell>
-                        <TableCell>{contact.organization || "-"}</TableCell>
-                        <TableCell>{contact.email || "-"}</TableCell>
-                        <TableCell>{contact.phone || "-"}</TableCell>
-                        <TableCell>
+              <div className="grid gap-3">
+                {contacts.map((contact) => (
+                  <div className="rounded-md border border-slate-200 bg-slate-50 p-3" key={contact.id}>
+                    <div className="grid gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto] xl:items-start">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="break-words font-semibold text-slate-950">{contact.full_name}</p>
                           <StatusPill
                             className={
                               contact.active
                                 ? "bg-emerald-100 text-emerald-700 border-emerald-200"
                                 : "bg-zinc-100 text-zinc-700 border-zinc-200"
                             }
-                            label={contact.active ? "Active" : "Inactive"}
+                            label={contact.active ? "Active" : "Archived"}
                           />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">{contact.title || contact.stakeholder_type || "Other"}</p>
+                      </div>
+                      <div className="grid gap-1 text-xs text-slate-600 sm:grid-cols-2">
+                        <p><span className="font-semibold text-slate-800">Org:</span> {contact.organization || "-"}</p>
+                        <p><span className="font-semibold text-slate-800">Email:</span> {contact.email || "-"}</p>
+                        <p><span className="font-semibold text-slate-800">Phone:</span> {contact.phone || "-"}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 xl:justify-end">
+                        <form action={setContactActiveAction}>
+                          <input name="id" type="hidden" value={contact.id} />
+                          <input name="active" type="hidden" value={contact.active ? "false" : "true"} />
+                          <Button size="sm" type="submit" variant="ghost">
+                            {contact.active ? "Archive" : "Restore"}
+                          </Button>
+                        </form>
+                        <details>
+                          <summary className="inline-flex h-7 cursor-pointer list-none items-center justify-center rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] font-medium text-destructive transition hover:bg-muted">
+                            Delete
+                          </summary>
+                          <form action={deleteContactAction} className="mt-2 rounded-md border border-red-200 bg-red-50 p-2">
+                            <input name="id" type="hidden" value={contact.id} />
+                            <Button size="sm" type="submit" variant="destructive">Confirm delete</Button>
+                          </form>
+                        </details>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

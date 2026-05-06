@@ -12,6 +12,10 @@ const signInSchema = z.object({
   next: safeInternalPathSchema.optional(),
 });
 
+const resetSchema = z.object({
+  email: z.string().trim().email(),
+});
+
 function loginError(message: string): never {
   return redirect(`/login?error=${encodeURIComponent(message)}`);
 }
@@ -44,4 +48,21 @@ export async function signOutAction() {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+export async function requestPasswordResetAction(formData: FormData) {
+  const parsed = resetSchema.safeParse({
+    email: formData.get("email"),
+  });
+
+  if (!parsed.success) {
+    return redirect("/login?error=Enter a valid email address.");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: `${process.env.APP_BASE_URL || "https://gov-rel-intel.vercel.app"}/settings`,
+  });
+
+  redirect("/login?message=If that user exists, a password reset email has been sent.");
 }

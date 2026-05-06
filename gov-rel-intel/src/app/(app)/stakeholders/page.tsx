@@ -3,6 +3,7 @@ import { CalendarClock, Filter, Handshake, Plus, Upload, UsersRound } from "luci
 
 import {
   createStakeholderAction,
+  deleteStakeholderAction,
   importGovernmentContactsAction,
   setStakeholderActiveAction,
 } from "@/app/(app)/stakeholders/actions";
@@ -84,7 +85,9 @@ export default async function StakeholdersPage({ searchParams }: PageProps) {
             ? "Choose a government directory spreadsheet before importing."
             : filters.error === "no-valid-rows"
               ? "No valid government contact rows were found in that spreadsheet."
-              : `Imported ${filters.imported ?? 0} government contacts. Skipped ${filters.skipped ?? 0} duplicate or invalid rows.`}
+              : filters.error === "preview-failed"
+                ? "The import preview could not be created. Try a smaller file or check the spreadsheet format."
+                : `Imported ${filters.imported ?? 0} government contacts. Skipped ${filters.skipped ?? 0} duplicate or invalid rows.`}
         </div>
       ) : null}
 
@@ -401,10 +404,19 @@ export default async function StakeholdersPage({ searchParams }: PageProps) {
                             <form action={setStakeholderActiveAction}>
                               <input name="id" type="hidden" value={stakeholder.id} />
                               <input name="active" type="hidden" value={stakeholder.active ? "false" : "true"} />
-                              <Button size="sm" type="submit" variant="ghost">
-                                {stakeholder.active ? "Archive" : "Activate"}
+                            <Button size="sm" type="submit" variant="ghost">
+                                {stakeholder.active ? "Archive" : "Restore"}
                               </Button>
                             </form>
+                            <details>
+                              <summary className="inline-flex h-7 cursor-pointer list-none items-center justify-center rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] font-medium text-destructive transition hover:bg-muted">
+                                Delete
+                              </summary>
+                              <form action={deleteStakeholderAction} className="mt-2 rounded-md border border-red-200 bg-red-50 p-2">
+                                <input name="id" type="hidden" value={stakeholder.id} />
+                                <Button size="sm" type="submit" variant="destructive">Confirm delete</Button>
+                              </form>
+                            </details>
                           </div>
                         </TableCell>
                       </TableRow>

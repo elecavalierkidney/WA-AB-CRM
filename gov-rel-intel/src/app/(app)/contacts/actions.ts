@@ -52,3 +52,41 @@ export async function createContactAction(formData: FormData) {
 
   revalidatePath("/contacts");
 }
+
+export async function setContactActiveAction(formData: FormData) {
+  const id = z.string().uuid().safeParse(formData.get("id"));
+  const active = z.coerce.boolean().safeParse(formData.get("active"));
+
+  if (!id.success || !active.success) {
+    return;
+  }
+
+  await requireAuthenticatedUser();
+  const supabase = createSupabaseAdminClient();
+  await supabase
+    .from("stakeholders")
+    .update({ active: active.data })
+    .eq("id", id.data)
+    .in("stakeholder_type", [...GENERAL_CONTACT_TYPES]);
+
+  revalidatePath("/contacts");
+}
+
+export async function deleteContactAction(formData: FormData) {
+  const id = z.string().uuid().safeParse(formData.get("id"));
+
+  if (!id.success) {
+    return;
+  }
+
+  await requireAuthenticatedUser();
+  const supabase = createSupabaseAdminClient();
+  await supabase
+    .from("stakeholders")
+    .delete()
+    .eq("id", id.data)
+    .in("stakeholder_type", [...GENERAL_CONTACT_TYPES]);
+
+  revalidatePath("/contacts");
+  revalidatePath("/tasks");
+}

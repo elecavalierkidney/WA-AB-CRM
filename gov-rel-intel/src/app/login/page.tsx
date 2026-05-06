@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { signInWithPasswordAction } from "@/app/login/actions";
+import { requestPasswordResetAction, signInWithPasswordAction } from "@/app/login/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 interface LoginPageProps {
   searchParams: Promise<{
     error?: string;
+    message?: string;
     next?: string;
   }>;
 }
@@ -43,6 +44,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 {params.error}
               </p>
             ) : null}
+            {params.message ? (
+              <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                {params.message}
+              </p>
+            ) : null}
             <div className="space-y-1">
               <Label htmlFor="email">Email</Label>
               <Input id="email" name="email" required type="email" />
@@ -53,6 +59,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </div>
             <Button className="w-full" type="submit">
               Sign in
+            </Button>
+          </form>
+          <form action={requestPasswordResetAction} className="mt-4 border-t border-slate-100 pt-4">
+            <div className="space-y-1">
+              <Label htmlFor="resetEmail">Reset password</Label>
+              <Input id="resetEmail" name="email" placeholder="you@example.com" required type="email" />
+            </div>
+            <Button className="mt-3 w-full" type="submit" variant="outline">
+              Send reset link
             </Button>
           </form>
         </CardContent>

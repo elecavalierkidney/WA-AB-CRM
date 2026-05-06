@@ -77,3 +77,19 @@ export async function setTaskStatusAction(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/tasks");
 }
+
+export async function deleteTaskAction(formData: FormData) {
+  const id = z.string().uuid().safeParse(formData.get("id"));
+
+  if (!id.success) {
+    return;
+  }
+
+  await requireAuthenticatedUser();
+  const supabase = createSupabaseAdminClient();
+  await supabase.from("tasks").delete().eq("id", id.data);
+
+  revalidatePath("/dashboard");
+  revalidatePath("/clients");
+  revalidatePath("/tasks");
+}

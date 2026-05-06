@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { CalendarClock, CheckCircle2, ClipboardList, Filter, Plus, Siren } from "lucide-react";
 
-import { createTaskAction, setTaskStatusAction } from "@/app/(app)/tasks/actions";
+import { createTaskAction, deleteTaskAction, setTaskStatusAction } from "@/app/(app)/tasks/actions";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { OPEN_TASK_STATUSES, TASK_PRIORITY_STYLES, TASK_STATUS_STYLES } from "@/lib/constants";
 import { listClients, listSourceItems, listStakeholders, listTasks } from "@/lib/server/queries";
@@ -325,69 +324,57 @@ export default async function TasksPage({ searchParams }: PageProps) {
                 No tasks found for the current filters.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Task</TableHead>
-                      <TableHead>Client</TableHead>
-                      <TableHead>Stakeholder</TableHead>
-                      <TableHead>Source item</TableHead>
-                      <TableHead>Owner</TableHead>
-                      <TableHead>Due</TableHead>
-                      <TableHead>Priority</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Update</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tasks.map((task) => (
-                      <TableRow key={task.id}>
-                        <TableCell>
-                          <div className="min-w-64">
-                            <p className="font-semibold text-slate-950">{task.title}</p>
-                            {task.description ? <p className="mt-1 line-clamp-2 text-xs text-slate-500">{task.description}</p> : null}
-                          </div>
-                        </TableCell>
-                        <TableCell>{getClientName(task.clients) || "—"}</TableCell>
-                        <TableCell>{getStakeholderName(task.stakeholders) || "—"}</TableCell>
-                        <TableCell>
-                          <p className="line-clamp-2 min-w-48 text-xs text-slate-600">{getSourceTitle(task.source_items) || "—"}</p>
-                        </TableCell>
-                        <TableCell>{task.owner || "—"}</TableCell>
-                        <TableCell>
-                          {task.due_date ? (
-                            <StatusPill
-                              className={
-                                task.due_date < today && task.status !== "Complete"
-                                  ? "border-rose-200 bg-rose-50 text-rose-700"
-                                  : "border-slate-200 bg-slate-100 text-slate-700"
-                              }
-                              label={task.due_date}
-                            />
-                          ) : (
-                            "—"
-                          )}
-                        </TableCell>
-                        <TableCell>
+              <div className="grid gap-3">
+                {tasks.map((task) => (
+                  <div className="rounded-md border border-slate-200 bg-slate-50 p-3" key={task.id}>
+                    <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] xl:items-start">
+                      <div className="min-w-0">
+                        <p className="break-words font-semibold text-slate-950">{task.title}</p>
+                        {task.description ? <p className="mt-1 line-clamp-2 text-xs text-slate-500">{task.description}</p> : null}
+                        <p className="mt-2 text-xs text-slate-500">
+                          {getClientName(task.clients) || "No client"}
+                          {getStakeholderName(task.stakeholders) ? ` | ${getStakeholderName(task.stakeholders)}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <StatusPill
+                          className={TASK_PRIORITY_STYLES[task.priority] ?? "bg-slate-100 text-slate-700"}
+                          label={task.priority}
+                        />
+                        <StatusPill
+                          className={TASK_STATUS_STYLES[task.status] ?? "bg-slate-100 text-slate-700"}
+                          label={task.status}
+                        />
+                        {task.due_date ? (
                           <StatusPill
-                            className={TASK_PRIORITY_STYLES[task.priority] ?? "bg-slate-100 text-slate-700"}
-                            label={task.priority}
+                            className={
+                              task.due_date < today && task.status !== "Complete"
+                                ? "border-rose-200 bg-rose-50 text-rose-700"
+                                : "border-slate-200 bg-slate-100 text-slate-700"
+                            }
+                            label={task.due_date}
                           />
-                        </TableCell>
-                        <TableCell>
-                          <StatusPill
-                            className={TASK_STATUS_STYLES[task.status] ?? "bg-slate-100 text-slate-700"}
-                            label={task.status}
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <TaskStatusForm id={task.id} status={task.status} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        ) : null}
+                        <p className="basis-full text-xs text-slate-500">
+                          {task.owner ? `Owner: ${task.owner}` : "No owner"}
+                          {getSourceTitle(task.source_items) ? ` | Source: ${getSourceTitle(task.source_items)}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 xl:justify-end">
+                        <TaskStatusForm id={task.id} status={task.status} />
+                        <details>
+                          <summary className="inline-flex h-7 cursor-pointer list-none items-center justify-center rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] font-medium text-destructive transition hover:bg-muted">
+                            Delete
+                          </summary>
+                          <form action={deleteTaskAction} className="mt-2 rounded-md border border-red-200 bg-red-50 p-2">
+                            <input name="id" type="hidden" value={task.id} />
+                            <Button size="sm" type="submit" variant="destructive">Confirm delete</Button>
+                          </form>
+                        </details>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

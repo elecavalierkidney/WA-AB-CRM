@@ -306,6 +306,64 @@ export async function importGovernmentContactsAction(formData: FormData) {
   }
 
   const supabase = createSupabaseAdminClient();
+  const importId = crypto.randomUUID();
+  const { error } = await supabase.from("ai_outputs").insert({
+    related_entity_type: "government_contact_import",
+    related_entity_id: importId,
+    output_type: "directory_import_preview",
+    output_json: {
+      contacts,
+      totalRows: rows.length,
+      validRows: contacts.length,
+      invalidRows: rows.length - contacts.length,
+    },
+  });
+
+  if (error) {
+    redirect("/stakeholders?imported=0&skipped=0&error=preview-failed");
+  }
+
+  redirect(`/stakeholders/import-review?id=${importId}`);
+}
+
+export async function cancelGovernmentContactsImportAction(formData: FormData) {
+  const importId = z.string().uuid().safeParse(formData.get("importId"));
+  if (!importId.success) {
+    redirect("/stakeholders");
+  }
+
+  await requireAuthenticatedUser();
+  const supabase = createSupabaseAdminClient();
+  await supabase
+    .from("ai_outputs")
+    .delete()
+    .eq("related_entity_type", "government_contact_import")
+    .eq("related_entity_id", importId.data);
+
+  redirect("/stakeholders?imported=0&skipped=0");
+}
+
+export async function confirmGovernmentContactsImportAction(formData: FormData) {
+  const importId = z.string().uuid().safeParse(formData.get("importId"));
+  if (!importId.success) {
+    redirect("/stakeholders?imported=0&skipped=0&error=no-valid-rows");
+  }
+
+  await requireAuthenticatedUser();
+  const supabase = createSupabaseAdminClient();
+  const { data: preview } = await supabase
+    .from("ai_outputs")
+    .select("id, output_json")
+    .eq("related_entity_type", "government_contact_import")
+    .eq("related_entity_id", importId.data)
+    .maybeSingle();
+  const output = preview?.output_json as { contacts?: ParsedGovernmentContact[]; totalRows?: number } | null;
+  const contacts = output?.contacts ?? [];
+
+  if (contacts.length === 0) {
+    redirect("/stakeholders?imported=0&skipped=0&error=no-valid-rows");
+  }
+
   const { data: existing } = await supabase.from("stakeholders").select("full_name, organization, email");
   const seen = new Set(
     (existing ?? []).map((contact) =>
@@ -346,9 +404,13 @@ export async function importGovernmentContactsAction(formData: FormData) {
     await supabase.from("stakeholders").insert(inserted);
   }
 
+  if (preview?.id) {
+    await supabase.from("ai_outputs").delete().eq("id", preview.id);
+  }
+
   revalidatePath("/stakeholders");
   revalidatePath("/contacts");
-  redirect(`/stakeholders?imported=${inserted.length}&skipped=${rows.length - inserted.length}`);
+  redirect(`/stakeholders?imported=${inserted.length}&skipped=${(output?.totalRows ?? contacts.length) - inserted.length}`);
 }
 
 export async function updateStakeholderAction(formData: FormData) {
@@ -418,6 +480,22 @@ export async function setStakeholderActiveAction(formData: FormData) {
 
   revalidatePath("/stakeholders");
   revalidatePath(`/stakeholders/${id.data}`);
+}
+
+export async function deleteStakeholderAction(formData: FormData) {
+  const id = z.string().uuid().safeParse(formData.get("id"));
+
+  if (!id.success) {
+    return;
+  }
+
+  await requireAuthenticatedUser();
+  const supabase = createSupabaseAdminClient();
+  await supabase.from("stakeholders").delete().eq("id", id.data);
+
+  revalidatePath("/stakeholders");
+  revalidatePath("/contacts");
+  revalidatePath("/tasks");
 }
 
 export async function upsertRelationshipAction(formData: FormData) {
